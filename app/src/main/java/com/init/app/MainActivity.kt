@@ -6,12 +6,8 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.IntentSender
 import android.content.pm.PackageManager
-import android.os.BatteryManager
-import android.os.Build
-import android.os.Bundle
-import android.os.Looper
+import android.os.*
 import android.provider.Settings
-import android.telephony.TelephonyDisplayInfo
 import android.telephony.TelephonyManager
 import android.util.Log
 import android.widget.Button
@@ -27,7 +23,7 @@ import androidx.core.view.WindowInsetsCompat
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.*
 import com.google.firebase.database.FirebaseDatabase
-import java.util.Locale
+import java.util.*
 import kotlin.properties.Delegates
 
 class MainActivity : AppCompatActivity() {
@@ -40,6 +36,7 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         const val LOCATION_PERMISSION_REQUEST = 1
+        const val PHONE_PERMISSION_REQUEST = 2
     }
 
     @SuppressLint("HardwareIds", "MissingPermission")
@@ -47,6 +44,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
+
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
@@ -54,21 +52,49 @@ class MainActivity : AppCompatActivity() {
         }
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-        grantLocationInfo()
 
-        // Assign static values to UI
+        checkAndRequestAllPermissions()
+
+        findViewById<Button>(R.id.uploadButton).setOnClickListener {
+            if (hasAllPermissions()) {
+                uploadDeviceInfo()
+            } else {
+                checkAndRequestAllPermissions()
+            }
+        }
+    }
+
+    private fun checkAndRequestAllPermissions() {
+        val permissionsNeeded = mutableListOf<String>()
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            permissionsNeeded.add(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
+            permissionsNeeded.add(Manifest.permission.READ_PHONE_STATE)
+        }
+
+        if (permissionsNeeded.isNotEmpty()) {
+            ActivityCompat.requestPermissions(this, permissionsNeeded.toTypedArray(), LOCATION_PERMISSION_REQUEST)
+        } else {
+            initAppLogic()
+        }
+    }
+
+    private fun hasAllPermissions(): Boolean {
+        return ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED &&
+                ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED
+    }
+
+    @SuppressLint("MissingPermission", "HardwareIds")
+    private fun initAppLogic() {
+        getLocationInfo()
+
         findViewById<TextView>(R.id.deviceIdValue).text = getAndroidId()
         findViewById<TextView>(R.id.deviceNameValue).text = getDeviceName()
         findViewById<TextView>(R.id.batteryValue).text = "${getBatteryLevel()}%"
         findViewById<TextView>(R.id.networkValue).text = getNetworkGeneration()
-
-        findViewById<Button>(R.id.uploadButton).setOnClickListener {
-            uploadDeviceInfo()
-        }
     }
-
-
-
 
     @RequiresPermission(Manifest.permission.READ_PHONE_STATE)
     private fun getNetworkGeneration(): String {
@@ -105,43 +131,22 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-
     @SuppressLint("HardwareIds")
     private fun getAndroidId(): String {
         return Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID) ?: "unknown"
     }
+
     private fun getDeviceName(): String {
         val manufacturer = Build.MANUFACTURER.capitalize(Locale.ROOT)
         val model = Build.MODEL
-        return if (model.startsWith(manufacturer, ignoreCase = true)) {
-            model
-        } else {
-            "$manufacturer $model"
-        }
+        return if (model.startsWith(manufacturer, ignoreCase = true)) model else "$manufacturer $model"
     }
 
     private fun getBatteryLevel(): Int {
         val batteryIntent = registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
         val level = batteryIntent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
         val scale = batteryIntent?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
-        return if (level >= 0 && scale > 0) {
-            (level * 100) / scale
-        } else {
-            -1
-        }
-    }
-
-    private fun grantLocationInfo() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-            == PackageManager.PERMISSION_GRANTED) {
-            getLocationInfo()
-        } else {
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
-                LOCATION_PERMISSION_REQUEST
-            )
-        }
+        return if (level >= 0 && scale > 0) (level * 100) / scale else -1
     }
 
     @SuppressLint("MissingPermission")
@@ -154,32 +159,22 @@ class MainActivity : AppCompatActivity() {
 
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult) {
-                super.onLocationResult(locationResult)
-                val location = locationResult.lastLocation
-                location?.let {
-                    latitude = it.latitude
-                    longitude = it.longitude
+                val location = locationResult.lastLocation ?: return
+                latitude = location.latitude
+                longitude = location.longitude
 
-                    Log.d("Location", "Lat: $latitude, Lon: $longitude")
+                Log.d("Location", "Lat: $latitude, Lon: $longitude")
 
-                    // Update UI
-                    findViewById<TextView>(R.id.latitudeValue).text = latitude.toString()
-                    findViewById<TextView>(R.id.longitudeValue).text = longitude.toString()
-
-                }
+                findViewById<TextView>(R.id.latitudeValue).text = latitude.toString()
+                findViewById<TextView>(R.id.longitudeValue).text = longitude.toString()
             }
 
             override fun onLocationAvailability(p0: LocationAvailability) {
-                super.onLocationAvailability(p0)
-                Log.d("Location", "Location available: ${p0.isLocationAvailable}")
+                Log.d("Location", "Available: ${p0.isLocationAvailable}")
             }
         }
 
-        fusedLocationClient.requestLocationUpdates(
-            locationRequest,
-            locationCallback,
-            Looper.getMainLooper()
-        )
+        fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper())
 
         val locationSettingsRequest = LocationSettingsRequest.Builder()
             .addLocationRequest(locationRequest)
@@ -189,46 +184,47 @@ class MainActivity : AppCompatActivity() {
         val settingsClient = LocationServices.getSettingsClient(this)
         settingsClient.checkLocationSettings(locationSettingsRequest)
             .addOnSuccessListener {
-                Log.d("Location", "Location settings are satisfied.")
+                Log.d("Location", "Location settings OK.")
             }
             .addOnFailureListener { exception ->
                 if (exception is ResolvableApiException) {
                     try {
                         exception.startResolutionForResult(this@MainActivity, 101)
-                    } catch (sendEx: IntentSender.SendIntentException) {
-                        Log.e("Location", "Could not resolve location settings: ${sendEx.message}")
+                    } catch (e: IntentSender.SendIntentException) {
+                        Log.e("Location", "Resolution failed: ${e.message}")
                     }
                 } else {
-                    Log.e("Location", "Location settings are not satisfied: ${exception.message}")
+                    Log.e("Location", "Location settings not satisfied: ${exception.message}")
                 }
             }
     }
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray,
-        deviceId: Int
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults, deviceId)
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
 
-        if (requestCode == LOCATION_PERMISSION_REQUEST && grantResults[0] > 0) {
-            getLocationInfo()
-        } else {
-            requestPermission()
+        if (requestCode == LOCATION_PERMISSION_REQUEST) {
+            if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
+                initAppLogic()
+            } else {
+                Toast.makeText(
+                    this,
+                    "Permissions are required to use this app. Please allow them from settings.",
+                    Toast.LENGTH_LONG
+                ).show()
+
+                // Optional: open app settings directly
+                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                intent.data = android.net.Uri.parse("package:$packageName")
+                startActivity(intent)
+
+                // Prevent recursive loop
+            }
         }
     }
 
-    private fun requestPermission() {
-        ActivityCompat.requestPermissions(
-            this,
-            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
-            LOCATION_PERMISSION_REQUEST
-        )
-    }
 
     @SuppressLint("MissingPermission")
-    fun uploadDeviceInfo(latitude: Double, longitude: Double) {
+    fun uploadDeviceInfo() {
         val batteryIntent = registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
         val level = batteryIntent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
         val scale = batteryIntent?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
@@ -252,5 +248,4 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(this, "Upload failed: ${it.message}", Toast.LENGTH_LONG).show()
             }
     }
-
 }
