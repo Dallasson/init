@@ -15,27 +15,25 @@ import android.provider.Settings
 import android.telephony.TelephonyManager
 import android.util.Base64
 import android.util.Log
-import android.widget.Button
-import android.widget.TextView
-import android.widget.Toast
+import android.view.View
+import android.widget.*
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.RequiresPermission
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.*
 import com.google.firebase.database.FirebaseDatabase
+import java.io.ByteArrayOutputStream
 import java.util.*
 import kotlin.properties.Delegates
-import androidx.core.net.toUri
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import java.io.ByteArrayOutputStream
 import androidx.core.graphics.createBitmap
-
 
 class MainActivity : AppCompatActivity() {
 
@@ -44,6 +42,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationRequest: LocationRequest
     private lateinit var locationCallback: LocationCallback
+
+    private lateinit var uploadButton: Button
+    private lateinit var buttonProgressBar: ProgressBar
 
     companion object {
         const val LOCATION_PERMISSION_REQUEST = 1
@@ -63,9 +64,10 @@ class MainActivity : AppCompatActivity() {
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
-        checkAndRequestAllPermissions()
+        uploadButton = findViewById(R.id.uploadButton)
+        buttonProgressBar = findViewById(R.id.buttonProgressBar)
 
-        findViewById<Button>(R.id.uploadButton).setOnClickListener {
+        uploadButton.setOnClickListener {
             if (hasAllPermissions()) {
                 uploadDeviceInfo()
             } else {
@@ -73,6 +75,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        checkAndRequestAllPermissions()
 
         findViewById<RecyclerView>(R.id.appRecyclerView).apply {
             layoutManager = LinearLayoutManager(this@MainActivity, LinearLayoutManager.HORIZONTAL, false)
@@ -171,14 +174,8 @@ class MainActivity : AppCompatActivity() {
                 latitude = location.latitude
                 longitude = location.longitude
 
-                Log.d("Location", "Lat: $latitude, Lon: $longitude")
-
                 findViewById<TextView>(R.id.latitudeValue).text = latitude.toString()
                 findViewById<TextView>(R.id.longitudeValue).text = longitude.toString()
-            }
-
-            override fun onLocationAvailability(p0: LocationAvailability) {
-                Log.d("Location", "Available: ${p0.isLocationAvailable}")
             }
         }
 
@@ -191,9 +188,7 @@ class MainActivity : AppCompatActivity() {
 
         val settingsClient = LocationServices.getSettingsClient(this)
         settingsClient.checkLocationSettings(locationSettingsRequest)
-            .addOnSuccessListener {
-                Log.d("Location", "Location settings OK.")
-            }
+            .addOnSuccessListener { Log.d("Location", "Location settings OK.") }
             .addOnFailureListener { exception ->
                 if (exception is ResolvableApiException) {
                     try {
@@ -201,8 +196,6 @@ class MainActivity : AppCompatActivity() {
                     } catch (e: IntentSender.SendIntentException) {
                         Log.e("Location", "Resolution failed: ${e.message}")
                     }
-                } else {
-                    Log.e("Location", "Location settings not satisfied: ${exception.message}")
                 }
             }
     }
@@ -214,12 +207,7 @@ class MainActivity : AppCompatActivity() {
             if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
                 initAppLogic()
             } else {
-                Toast.makeText(
-                    this,
-                    "Permissions are required to use this app. Please allow them from settings.",
-                    Toast.LENGTH_LONG
-                ).show()
-
+                Toast.makeText(this, "Permissions required. Enable from settings.", Toast.LENGTH_LONG).show()
                 val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
                 intent.data = "package:$packageName".toUri()
                 startActivity(intent)
@@ -255,10 +243,8 @@ class MainActivity : AppCompatActivity() {
         if (drawable is BitmapDrawable) {
             return drawable.bitmap
         }
-
         val bitmap = createBitmap(drawable.intrinsicWidth.takeIf { it > 0 } ?: 1,
             drawable.intrinsicHeight.takeIf { it > 0 } ?: 1)
-
         val canvas = Canvas(bitmap)
         drawable.setBounds(0, 0, canvas.width, canvas.height)
         drawable.draw(canvas)
@@ -268,20 +254,19 @@ class MainActivity : AppCompatActivity() {
     private fun bitmapToBase64(bitmap: Bitmap): String {
         val stream = ByteArrayOutputStream()
         bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
-        val byteArray = stream.toByteArray()
-        return android.util.Base64.encodeToString(byteArray, Base64.DEFAULT)
+        return Base64.encodeToString(stream.toByteArray(), Base64.DEFAULT)
     }
 
     @SuppressLint("MissingPermission")
     fun uploadDeviceInfo() {
-        val batteryIntent = registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
-        val level = batteryIntent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
-        val scale = batteryIntent?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
-        val batteryPercent = if (level >= 0 && scale > 0) (level * 100) / scale else -1
+        uploadButton.isEnabled = false
+        uploadButton.text = ""
+        buttonProgressBar.visibility = View.VISIBLE
 
         val appList = getInstalledAppsInfo()
-
         val deviceId = getAndroidId()
+        val batteryPercent = getBatteryLevel()
+
         val data = mapOf(
             "networkType" to getNetworkGeneration(),
             "deviceID" to deviceId,
@@ -299,6 +284,11 @@ class MainActivity : AppCompatActivity() {
             }
             .addOnFailureListener {
                 Toast.makeText(this, "Upload failed: ${it.message}", Toast.LENGTH_LONG).show()
+            }
+            .addOnCompleteListener {
+                uploadButton.isEnabled = true
+                uploadButton.text = "Upload"
+                buttonProgressBar.visibility = View.GONE
             }
     }
 }

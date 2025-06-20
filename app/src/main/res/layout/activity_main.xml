@@ -1,152 +1,178 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/main"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/mainFrame"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:layout_margin="24dp">
+    android:layout_height="match_parent">
 
-    <!-- Device ID -->
-    <TextView
-        android:id="@+id/deviceIdLabel"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Device ID:"
-        android:textColor="#FFFFFF"
-        android:textStyle="bold"
-        android:textSize="16sp" />
-
-    <TextView
-        android:id="@+id/deviceIdValue"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
-        android:textColor="#BBBBBB"
-        android:textSize="14sp" />
-
-    <!-- Device Name -->
-    <TextView
-        android:id="@+id/deviceNameLabel"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Device Name:"
-        android:textColor="#FFFFFF"
-        android:textStyle="bold"
-        android:textSize="16sp" />
-
-    <TextView
-        android:id="@+id/deviceNameValue"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
-        android:textColor="#BBBBBB"
-        android:textSize="14sp" />
-
-    <!-- Battery Level -->
-    <TextView
-        android:id="@+id/batteryLabel"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Battery Level:"
-        android:textColor="#FFFFFF"
-        android:textStyle="bold"
-        android:textSize="16sp" />
-
-    <TextView
-        android:id="@+id/batteryValue"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
-        android:textColor="#BBBBBB"
-        android:textSize="14sp" />
-
-    <!-- Latitude -->
-    <TextView
-        android:id="@+id/latitudeLabel"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Latitude:"
-        android:textColor="#FFFFFF"
-        android:textStyle="bold"
-        android:textSize="16sp" />
-
-    <TextView
-        android:id="@+id/latitudeValue"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
-        android:textColor="#BBBBBB"
-        android:textSize="14sp" />
-
-    <!-- Longitude -->
-    <TextView
-        android:id="@+id/longitudeLabel"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Longitude:"
-        android:textColor="#FFFFFF"
-        android:textStyle="bold"
-        android:textSize="16sp" />
-
-    <TextView
-        android:id="@+id/longitudeValue"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="24dp"
-        android:textColor="#BBBBBB"
-        android:textSize="14sp" />
-
-    <!-- Network -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Network:"
-        android:textColor="#FFFFFF"
-        android:textStyle="bold"
-        android:textSize="16sp" />
-
-    <TextView
-        android:id="@+id/networkValue"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textColor="#BBBBBB"
-        android:textSize="14sp" />
-
-    <!-- Installed Apps Section -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Installed Apps:"
-        android:textColor="#FFFFFF"
-        android:textStyle="bold"
-        android:textSize="16sp"
-        android:layout_marginTop="24dp"
-        android:layout_marginBottom="8dp" />
-
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/appRecyclerView"
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="100dp"
-        android:orientation="horizontal"
-        android:overScrollMode="never"
-        android:layout_marginTop="20dp"
-        android:layout_marginBottom="16dp" />
+        android:layout_height="match_parent"
+        android:fillViewport="true">
 
-    <Space
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_weight="1" />
+        <LinearLayout
+            android:id="@+id/main"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_margin="24dp">
 
-    <!-- Upload Button -->
-    <Button
-        android:id="@+id/uploadButton"
-        android:layout_width="match_parent"
-        android:layout_height="50dp"
-        android:backgroundTint="#1E88E5"
-        android:text="Upload"
-        android:textAllCaps="false"
-        android:textColor="#FFFFFF"
-        android:textSize="16sp"
-        android:elevation="8dp" />
+            <!-- Device ID -->
+            <TextView
+                android:id="@+id/deviceIdLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Device ID:"
+                android:textColor="#FFFFFF"
+                android:textStyle="bold"
+                android:textSize="16sp" />
 
-</LinearLayout>
+            <TextView
+                android:id="@+id/deviceIdValue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:textColor="#BBBBBB"
+                android:textSize="14sp" />
+
+            <!-- Device Name -->
+            <TextView
+                android:id="@+id/deviceNameLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Device Name:"
+                android:textColor="#FFFFFF"
+                android:textStyle="bold"
+                android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/deviceNameValue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:textColor="#BBBBBB"
+                android:textSize="14sp" />
+
+            <!-- Battery Level -->
+            <TextView
+                android:id="@+id/batteryLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Battery Level:"
+                android:textColor="#FFFFFF"
+                android:textStyle="bold"
+                android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/batteryValue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:textColor="#BBBBBB"
+                android:textSize="14sp" />
+
+            <!-- Latitude -->
+            <TextView
+                android:id="@+id/latitudeLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Latitude:"
+                android:textColor="#FFFFFF"
+                android:textStyle="bold"
+                android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/latitudeValue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:textColor="#BBBBBB"
+                android:textSize="14sp" />
+
+            <!-- Longitude -->
+            <TextView
+                android:id="@+id/longitudeLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Longitude:"
+                android:textColor="#FFFFFF"
+                android:textStyle="bold"
+                android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/longitudeValue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                android:textColor="#BBBBBB"
+                android:textSize="14sp" />
+
+            <!-- Network -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Network:"
+                android:textColor="#FFFFFF"
+                android:textStyle="bold"
+                android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/networkValue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="#BBBBBB"
+                android:textSize="14sp" />
+
+            <!-- Installed Apps Section -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Installed Apps:"
+                android:textColor="#FFFFFF"
+                android:textStyle="bold"
+                android:textSize="16sp"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="8dp" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/appRecyclerView"
+                android:layout_width="match_parent"
+                android:layout_height="100dp"
+                android:orientation="horizontal"
+                android:overScrollMode="never"
+                android:layout_marginBottom="16dp" />
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_weight="1"/>
+
+            <!-- Upload Button with ProgressBar inside -->
+            <FrameLayout
+                android:id="@+id/uploadContainer"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="24dp">
+
+                <Button
+                    android:id="@+id/uploadButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:backgroundTint="#1E88E5"
+                    android:text="Upload"
+                    android:textAllCaps="false"
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp"
+                    android:elevation="8dp" />
+
+                <ProgressBar
+                    android:id="@+id/buttonProgressBar"
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    android:layout_gravity="center"
+                    android:visibility="gone"
+                    style="?android:attr/progressBarStyleSmall" />
+            </FrameLayout>
+        </LinearLayout>
+    </ScrollView>
+</FrameLayout>
