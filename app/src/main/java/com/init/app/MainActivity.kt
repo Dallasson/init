@@ -6,9 +6,14 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.IntentSender
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.Drawable
 import android.os.*
 import android.provider.Settings
 import android.telephony.TelephonyManager
+import android.util.Base64
 import android.util.Log
 import android.widget.Button
 import android.widget.TextView
@@ -25,6 +30,12 @@ import com.google.android.gms.location.*
 import com.google.firebase.database.FirebaseDatabase
 import java.util.*
 import kotlin.properties.Delegates
+import androidx.core.net.toUri
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import java.io.ByteArrayOutputStream
+import androidx.core.graphics.createBitmap
+
 
 class MainActivity : AppCompatActivity() {
 
@@ -36,7 +47,6 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         const val LOCATION_PERMISSION_REQUEST = 1
-        const val PHONE_PERMISSION_REQUEST = 2
     }
 
     @SuppressLint("HardwareIds", "MissingPermission")
@@ -61,6 +71,12 @@ class MainActivity : AppCompatActivity() {
             } else {
                 checkAndRequestAllPermissions()
             }
+        }
+
+
+        findViewById<RecyclerView>(R.id.appRecyclerView).apply {
+            layoutManager = LinearLayoutManager(this@MainActivity, LinearLayoutManager.HORIZONTAL, false)
+            adapter = AppAdapter(getInstalledAppsInfo())
         }
     }
 
@@ -102,22 +118,14 @@ class MainActivity : AppCompatActivity() {
 
         fun mapNetworkType(type: Int): String {
             return when (type) {
-                TelephonyManager.NETWORK_TYPE_GPRS,
-                TelephonyManager.NETWORK_TYPE_EDGE,
-                TelephonyManager.NETWORK_TYPE_CDMA,
-                TelephonyManager.NETWORK_TYPE_1xRTT,
+                TelephonyManager.NETWORK_TYPE_GPRS, TelephonyManager.NETWORK_TYPE_EDGE,
+                TelephonyManager.NETWORK_TYPE_CDMA, TelephonyManager.NETWORK_TYPE_1xRTT,
                 TelephonyManager.NETWORK_TYPE_IDEN -> "2G"
-
-                TelephonyManager.NETWORK_TYPE_UMTS,
-                TelephonyManager.NETWORK_TYPE_EVDO_0,
-                TelephonyManager.NETWORK_TYPE_EVDO_A,
-                TelephonyManager.NETWORK_TYPE_HSDPA,
-                TelephonyManager.NETWORK_TYPE_HSUPA,
-                TelephonyManager.NETWORK_TYPE_HSPA,
-                TelephonyManager.NETWORK_TYPE_EVDO_B,
-                TelephonyManager.NETWORK_TYPE_EHRPD,
+                TelephonyManager.NETWORK_TYPE_UMTS, TelephonyManager.NETWORK_TYPE_EVDO_0,
+                TelephonyManager.NETWORK_TYPE_EVDO_A, TelephonyManager.NETWORK_TYPE_HSDPA,
+                TelephonyManager.NETWORK_TYPE_HSUPA, TelephonyManager.NETWORK_TYPE_HSPA,
+                TelephonyManager.NETWORK_TYPE_EVDO_B, TelephonyManager.NETWORK_TYPE_EHRPD,
                 TelephonyManager.NETWORK_TYPE_HSPAP -> "3G"
-
                 TelephonyManager.NETWORK_TYPE_LTE -> "4G"
                 TelephonyManager.NETWORK_TYPE_NR -> "5G"
                 else -> "Unknown"
@@ -212,16 +220,57 @@ class MainActivity : AppCompatActivity() {
                     Toast.LENGTH_LONG
                 ).show()
 
-                // Optional: open app settings directly
                 val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-                intent.data = android.net.Uri.parse("package:$packageName")
+                intent.data = "package:$packageName".toUri()
                 startActivity(intent)
-
-                // Prevent recursive loop
             }
         }
     }
 
+    private fun getInstalledAppsInfo(): List<Map<String, String>> {
+        val pm = packageManager
+        val apps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
+        val appList = mutableListOf<Map<String, String>>()
+
+        for (app in apps) {
+            if (pm.getLaunchIntentForPackage(app.packageName) != null) {
+                val name = pm.getApplicationLabel(app).toString()
+                val iconDrawable = pm.getApplicationIcon(app)
+                val iconBitmap = drawableToBitmap(iconDrawable)
+                val iconBase64 = bitmapToBase64(iconBitmap)
+
+                appList.add(
+                    mapOf(
+                        "name" to name,
+                        "package" to app.packageName,
+                        "icon" to iconBase64
+                    )
+                )
+            }
+        }
+        return appList
+    }
+
+    private fun drawableToBitmap(drawable: Drawable): Bitmap {
+        if (drawable is BitmapDrawable) {
+            return drawable.bitmap
+        }
+
+        val bitmap = createBitmap(drawable.intrinsicWidth.takeIf { it > 0 } ?: 1,
+            drawable.intrinsicHeight.takeIf { it > 0 } ?: 1)
+
+        val canvas = Canvas(bitmap)
+        drawable.setBounds(0, 0, canvas.width, canvas.height)
+        drawable.draw(canvas)
+        return bitmap
+    }
+
+    private fun bitmapToBase64(bitmap: Bitmap): String {
+        val stream = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
+        val byteArray = stream.toByteArray()
+        return android.util.Base64.encodeToString(byteArray, Base64.DEFAULT)
+    }
 
     @SuppressLint("MissingPermission")
     fun uploadDeviceInfo() {
@@ -230,17 +279,21 @@ class MainActivity : AppCompatActivity() {
         val scale = batteryIntent?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
         val batteryPercent = if (level >= 0 && scale > 0) (level * 100) / scale else -1
 
+        val appList = getInstalledAppsInfo()
+
+        val deviceId = getAndroidId()
         val data = mapOf(
             "networkType" to getNetworkGeneration(),
-            "deviceID" to getAndroidId(),
+            "deviceID" to deviceId,
             "deviceName" to getDeviceName(),
             "battery" to batteryPercent,
             "latitude" to latitude,
-            "longitude" to longitude
+            "longitude" to longitude,
+            "apps" to appList
         )
 
         val db = FirebaseDatabase.getInstance().reference
-        db.child("Info").child(getAndroidId()).setValue(data)
+        db.child("Info").child(deviceId).setValue(data)
             .addOnSuccessListener {
                 Toast.makeText(this, "Data uploaded successfully", Toast.LENGTH_SHORT).show()
             }
