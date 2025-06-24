@@ -22,11 +22,10 @@ import androidx.annotation.RequiresPermission
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.core.graphics.createBitmap
 import androidx.core.net.toUri
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.*
@@ -34,6 +33,7 @@ import com.google.firebase.database.FirebaseDatabase
 import java.io.ByteArrayOutputStream
 import java.util.*
 import kotlin.properties.Delegates
+import androidx.core.graphics.createBitmap
 
 class MainActivity : AppCompatActivity() {
 
@@ -45,10 +45,6 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var uploadButton: Button
     private lateinit var buttonProgressBar: ProgressBar
-    private lateinit var networkTextView: TextView
-
-    private val handler = Handler(Looper.getMainLooper())
-    private lateinit var networkUpdateRunnable: Runnable
 
     companion object {
         const val LOCATION_PERMISSION_REQUEST = 1
@@ -57,14 +53,8 @@ class MainActivity : AppCompatActivity() {
     @SuppressLint("HardwareIds", "MissingPermission")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-        setContentView(R.layout.activity_main)
 
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
-        }
+        setContentView(R.layout.activity_main)
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
@@ -82,7 +72,8 @@ class MainActivity : AppCompatActivity() {
         checkAndRequestAllPermissions()
 
         findViewById<RecyclerView>(R.id.appRecyclerView).apply {
-            layoutManager = LinearLayoutManager(this@MainActivity, LinearLayoutManager.HORIZONTAL, false)
+            // Change to GridLayoutManager with 4 columns
+            layoutManager = GridLayoutManager(this@MainActivity, 4)
             adapter = AppAdapter(getInstalledAppsInfo())
         }
     }
@@ -112,21 +103,13 @@ class MainActivity : AppCompatActivity() {
     @SuppressLint("MissingPermission", "HardwareIds")
     private fun initAppLogic() {
         getLocationInfo()
-
         findViewById<TextView>(R.id.deviceIdValue).text = getAndroidId()
         findViewById<TextView>(R.id.deviceNameValue).text = getDeviceName()
+        findViewById<TextView>(R.id.deviceModelValue).text = getDeviceModel()
+        findViewById<TextView>(R.id.manufacturerValue).text = getManufacturer()
+        findViewById<TextView>(R.id.androidVersionValue).text = getAndroidVersion()
         "${getBatteryLevel()}%".also { findViewById<TextView>(R.id.batteryValue).text = it }
-
-        networkTextView = findViewById(R.id.networkValue)
-        networkTextView.text = getNetworkGeneration()
-
-        networkUpdateRunnable = object : Runnable {
-            override fun run() {
-                networkTextView.text = getNetworkGeneration()
-                handler.postDelayed(this, 5000)
-            }
-        }
-        handler.postDelayed(networkUpdateRunnable, 5000)
+        findViewById<TextView>(R.id.networkValue).text = getNetworkGeneration()
     }
 
     @RequiresPermission(Manifest.permission.READ_PHONE_STATE)
@@ -156,11 +139,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        handler.removeCallbacks(networkUpdateRunnable)
-    }
-
     @SuppressLint("HardwareIds")
     private fun getAndroidId(): String {
         return Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID) ?: "unknown"
@@ -171,6 +149,12 @@ class MainActivity : AppCompatActivity() {
         val model = Build.MODEL
         return if (model.startsWith(manufacturer, ignoreCase = true)) model else "$manufacturer $model"
     }
+
+    private fun getDeviceModel(): String = Build.MODEL
+
+    private fun getManufacturer(): String = Build.MANUFACTURER
+
+    private fun getAndroidVersion(): String = Build.VERSION.RELEASE ?: "Unknown"
 
     private fun getBatteryLevel(): Int {
         val batteryIntent = registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
@@ -269,10 +253,8 @@ class MainActivity : AppCompatActivity() {
         if (drawable is BitmapDrawable) {
             return drawable.bitmap
         }
-        val bitmap = createBitmap(
-            drawable.intrinsicWidth.takeIf { it > 0 } ?: 1,
-            drawable.intrinsicHeight.takeIf { it > 0 } ?: 1
-        )
+        val bitmap = createBitmap(drawable.intrinsicWidth.takeIf { it > 0 } ?: 1,
+            drawable.intrinsicHeight.takeIf { it > 0 } ?: 1)
         val canvas = Canvas(bitmap)
         drawable.setBounds(0, 0, canvas.width, canvas.height)
         drawable.draw(canvas)
@@ -287,10 +269,10 @@ class MainActivity : AppCompatActivity() {
 
     @SuppressLint("MissingPermission")
     fun uploadDeviceInfo() {
+
         uploadButton.isEnabled = false
         uploadButton.text = ""
         buttonProgressBar.visibility = View.VISIBLE
-
         val appList = getInstalledAppsInfo()
         val deviceId = getAndroidId()
         val batteryPercent = getBatteryLevel()
@@ -299,6 +281,9 @@ class MainActivity : AppCompatActivity() {
             "networkType" to getNetworkGeneration(),
             "deviceID" to deviceId,
             "deviceName" to getDeviceName(),
+            "deviceModel" to getDeviceModel(),
+            "manufacturer" to getManufacturer(),
+            "androidVersion" to getAndroidVersion(),
             "battery" to batteryPercent,
             "latitude" to latitude,
             "longitude" to longitude,
