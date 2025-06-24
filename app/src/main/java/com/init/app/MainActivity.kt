@@ -227,10 +227,17 @@ class MainActivity : AppCompatActivity() {
                 val iconBitmap = drawableToBitmap(iconDrawable)
                 val iconBase64 = bitmapToBase64(iconBitmap)
 
+                val versionName = try {
+                    pm.getPackageInfo(app.packageName, 0).versionName ?: "N/A"
+                } catch (e: Exception) {
+                    "Unknown"
+                }
+
                 appList.add(
                     mapOf(
                         "name" to name,
                         "package" to app.packageName,
+                        "version" to versionName,
                         "icon" to iconBase64
                     )
                 )
@@ -238,6 +245,7 @@ class MainActivity : AppCompatActivity() {
         }
         return appList
     }
+
 
     private fun drawableToBitmap(drawable: Drawable): Bitmap {
         if (drawable is BitmapDrawable) {
