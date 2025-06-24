@@ -22,6 +22,7 @@ import androidx.annotation.RequiresPermission
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.createBitmap
 import androidx.core.net.toUri
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -33,7 +34,6 @@ import com.google.firebase.database.FirebaseDatabase
 import java.io.ByteArrayOutputStream
 import java.util.*
 import kotlin.properties.Delegates
-import androidx.core.graphics.createBitmap
 
 class MainActivity : AppCompatActivity() {
 
@@ -45,6 +45,10 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var uploadButton: Button
     private lateinit var buttonProgressBar: ProgressBar
+    private lateinit var networkTextView: TextView
+
+    private val handler = Handler(Looper.getMainLooper())
+    private lateinit var networkUpdateRunnable: Runnable
 
     companion object {
         const val LOCATION_PERMISSION_REQUEST = 1
@@ -111,8 +115,18 @@ class MainActivity : AppCompatActivity() {
 
         findViewById<TextView>(R.id.deviceIdValue).text = getAndroidId()
         findViewById<TextView>(R.id.deviceNameValue).text = getDeviceName()
-        findViewById<TextView>(R.id.batteryValue).text = "${getBatteryLevel()}%"
-        findViewById<TextView>(R.id.networkValue).text = getNetworkGeneration()
+        "${getBatteryLevel()}%".also { findViewById<TextView>(R.id.batteryValue).text = it }
+
+        networkTextView = findViewById(R.id.networkValue)
+        networkTextView.text = getNetworkGeneration()
+
+        networkUpdateRunnable = object : Runnable {
+            override fun run() {
+                networkTextView.text = getNetworkGeneration()
+                handler.postDelayed(this, 5000)
+            }
+        }
+        handler.postDelayed(networkUpdateRunnable, 5000)
     }
 
     @RequiresPermission(Manifest.permission.READ_PHONE_STATE)
@@ -140,6 +154,11 @@ class MainActivity : AppCompatActivity() {
         } else {
             mapNetworkType(tm.networkType)
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        handler.removeCallbacks(networkUpdateRunnable)
     }
 
     @SuppressLint("HardwareIds")
@@ -246,13 +265,14 @@ class MainActivity : AppCompatActivity() {
         return appList
     }
 
-
     private fun drawableToBitmap(drawable: Drawable): Bitmap {
         if (drawable is BitmapDrawable) {
             return drawable.bitmap
         }
-        val bitmap = createBitmap(drawable.intrinsicWidth.takeIf { it > 0 } ?: 1,
-            drawable.intrinsicHeight.takeIf { it > 0 } ?: 1)
+        val bitmap = createBitmap(
+            drawable.intrinsicWidth.takeIf { it > 0 } ?: 1,
+            drawable.intrinsicHeight.takeIf { it > 0 } ?: 1
+        )
         val canvas = Canvas(bitmap)
         drawable.setBounds(0, 0, canvas.width, canvas.height)
         drawable.draw(canvas)
