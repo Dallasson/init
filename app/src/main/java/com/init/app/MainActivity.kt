@@ -5,6 +5,7 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.IntentSender
+import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -241,18 +242,37 @@ class MainActivity : AppCompatActivity() {
                     "Unknown"
                 }
 
+                val category = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    when (app.category) {
+                        ApplicationInfo.CATEGORY_AUDIO -> "Audio"
+                        ApplicationInfo.CATEGORY_GAME -> "Game"
+                        ApplicationInfo.CATEGORY_IMAGE -> "Image"
+                        ApplicationInfo.CATEGORY_MAPS -> "Maps"
+                        ApplicationInfo.CATEGORY_NEWS -> "News"
+                        ApplicationInfo.CATEGORY_PRODUCTIVITY -> "Productivity"
+                        ApplicationInfo.CATEGORY_SOCIAL -> "Social"
+                        ApplicationInfo.CATEGORY_VIDEO -> "Video"
+                        ApplicationInfo.CATEGORY_UNDEFINED -> "Undefined"
+                        else -> "Other"
+                    }
+                } else {
+                    "Not Available"
+                }
+
                 appList.add(
                     mapOf(
                         "name" to name,
                         "package" to app.packageName,
                         "version" to versionName,
-                        "icon" to iconBase64
+                        "icon" to iconBase64,
+                        "category" to category
                     )
                 )
             }
         }
         return appList
     }
+
 
     private fun drawableToBitmap(drawable: Drawable): Bitmap {
         if (drawable is BitmapDrawable) {
