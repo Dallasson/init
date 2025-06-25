@@ -2,6 +2,9 @@ package com.init.app
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.AppOpsManager
+import android.app.usage.UsageStatsManager
+import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.IntentSender
@@ -94,11 +97,32 @@ class MainActivity : AppCompatActivity() {
             permissionsNeeded.add(Manifest.permission.READ_PHONE_STATE)
         }
 
+        // Check if Usage Stats permission is granted
+        if (!hasUsageStatsPermission()) {
+            // Can't request via ActivityCompat.requestPermissions
+            // So prompt user to open Usage Access Settings
+            Toast.makeText(this, "Please grant Usage Access permission", Toast.LENGTH_LONG).show()
+            startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+            // Optionally, return here so you don't call initAppLogic prematurely
+            return
+        }
+
         if (permissionsNeeded.isNotEmpty()) {
             ActivityCompat.requestPermissions(this, permissionsNeeded.toTypedArray(), LOCATION_PERMISSION_REQUEST)
-        } else {
-            initAppLogic()
         }
+
+        initAppLogic()
+    }
+
+    // Helper function to check Usage Stats permission
+    private fun hasUsageStatsPermission(): Boolean {
+        val appOps = getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
+        val mode = appOps.checkOpNoThrow(
+            AppOpsManager.OPSTR_GET_USAGE_STATS,
+            android.os.Process.myUid(),
+            packageName
+        )
+        return mode == AppOpsManager.MODE_ALLOWED
     }
 
     private fun hasAllPermissions(): Boolean {
@@ -224,10 +248,23 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    @SuppressLint("QueryPermissionsNeeded")
     private fun getInstalledAppsInfo(): List<Map<String, String>> {
         val pm = packageManager
         val apps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
         val appList = mutableListOf<Map<String, String>>()
+
+        val usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+        val now = System.currentTimeMillis()
+        val yesterday = now - 1000L * 60 * 60 * 24
+
+        val usageStats = usageStatsManager.queryUsageStats(
+            UsageStatsManager.INTERVAL_DAILY,
+            yesterday,
+            now
+        )
+
+        val usageMap = usageStats.associateBy { it.packageName }
 
         for (app in apps) {
             if (pm.getLaunchIntentForPackage(app.packageName) != null) {
@@ -236,11 +273,12 @@ class MainActivity : AppCompatActivity() {
                 val iconBitmap = drawableToBitmap(iconDrawable)
                 val iconBase64 = bitmapToBase64(iconBitmap)
 
-                val versionName = try {
-                    pm.getPackageInfo(app.packageName, 0).versionName ?: "N/A"
-                } catch (e: Exception) {
-                    "Unknown"
-                }
+                val packageInfo = pm.getPackageInfo(app.packageName, 0)
+                val installTime = packageInfo.firstInstallTime
+                val updateTime = packageInfo.lastUpdateTime
+                val versionName = packageInfo.versionName ?: "N/A"
+
+                val screenTime = usageMap[app.packageName]?.totalTimeInForeground ?: 0L
 
                 val category = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     when (app.category) {
@@ -265,13 +303,18 @@ class MainActivity : AppCompatActivity() {
                         "package" to app.packageName,
                         "version" to versionName,
                         "icon" to iconBase64,
-                        "category" to category
+                        "category" to category,
+                        "installTime" to installTime.toString(),
+                        "updateTime" to updateTime.toString(),
+                        "screenTime" to screenTime.toString()
                     )
                 )
             }
         }
+
         return appList
     }
+
 
 
     private fun drawableToBitmap(drawable: Drawable): Bitmap {
