@@ -17,12 +17,11 @@
         android:id="@+id/appName"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:maxLines="1"
-        android:ellipsize="end"
         android:textSize="12sp"
         android:textColor="@color/textPrimary"
         android:gravity="center"
         android:layout_marginTop="4dp" />
+
 
     <TextView
         android:id="@+id/appVersion"
@@ -32,7 +31,7 @@
         android:textColor="@color/textSecondary"
         android:gravity="center"
         android:layout_marginTop="2dp"
-        android:maxLines="1"
+        android:maxLines="2"
         android:ellipsize="end" />
 </LinearLayout>
 
