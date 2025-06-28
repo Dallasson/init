@@ -59,6 +59,11 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
+        setUpUI()
+
+    }
+
+    private fun setUpUI(){
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.mainFrame)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
@@ -85,6 +90,7 @@ class MainActivity : AppCompatActivity() {
             layoutManager = GridLayoutManager(this@MainActivity, 4)
             adapter = AppAdapter(getInstalledAppsInfo())
         }
+
     }
 
     private fun checkAndRequestAllPermissions() {
@@ -97,13 +103,10 @@ class MainActivity : AppCompatActivity() {
             permissionsNeeded.add(Manifest.permission.READ_PHONE_STATE)
         }
 
-        // Check if Usage Stats permission is granted
+
         if (!hasUsageStatsPermission()) {
-            // Can't request via ActivityCompat.requestPermissions
-            // So prompt user to open Usage Access Settings
             Toast.makeText(this, "Please grant Usage Access permission", Toast.LENGTH_LONG).show()
             startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
-            // Optionally, return here so you don't call initAppLogic prematurely
             return
         }
 
@@ -114,12 +117,11 @@ class MainActivity : AppCompatActivity() {
         initAppLogic()
     }
 
-    // Helper function to check Usage Stats permission
     private fun hasUsageStatsPermission(): Boolean {
         val appOps = getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
         val mode = appOps.checkOpNoThrow(
             AppOpsManager.OPSTR_GET_USAGE_STATS,
-            android.os.Process.myUid(),
+            Process.myUid(),
             packageName
         )
         return mode == AppOpsManager.MODE_ALLOWED
@@ -315,8 +317,6 @@ class MainActivity : AppCompatActivity() {
         return appList
     }
 
-
-
     private fun drawableToBitmap(drawable: Drawable): Bitmap {
         if (drawable is BitmapDrawable) {
             return drawable.bitmap
@@ -336,7 +336,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     @SuppressLint("MissingPermission")
-    fun uploadDeviceInfo() {
+    private fun uploadDeviceInfo() {
 
         uploadButton.isEnabled = false
         uploadButton.text = ""
@@ -368,7 +368,7 @@ class MainActivity : AppCompatActivity() {
             }
             .addOnCompleteListener {
                 uploadButton.isEnabled = true
-                uploadButton.text = "Upload"
+                "Upload".also { uploadButton.text = it }
                 buttonProgressBar.visibility = View.GONE
             }
     }

@@ -1,6 +1,5 @@
 package com.init.app
 
-import android.annotation.SuppressLint
 import android.graphics.BitmapFactory
 import android.util.Base64
 import android.view.LayoutInflater
@@ -25,11 +24,11 @@ class AppAdapter(private val apps: List<Map<String, String>>) :
         return AppViewHolder(view)
     }
 
-    @SuppressLint("SetTextI18n")
+
     override fun onBindViewHolder(holder: AppViewHolder, position: Int) {
         val app = apps[position]
         holder.name.text = app["name"]
-        holder.version.text = "v${app["version"] ?: "N/A"}"
+        "v${app["version"] ?: "N/A"}".also { holder.version.text = it }
         val imageBytes = Base64.decode(app["icon"], Base64.DEFAULT)
         holder.icon.setImageBitmap(BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size))
     }
